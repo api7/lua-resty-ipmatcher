@@ -23,7 +23,7 @@ local AF_INET     = 2
 local AF_INET6    = 10
 
 
-local _M = {_VERSION = 0.1}
+local _M = {_VERSION = 0.2}
 
 
 ffi_cdef[[
