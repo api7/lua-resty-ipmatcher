@@ -21,6 +21,9 @@ local cur_level   = ngx.config.subsystem == "http" and
 
 local AF_INET     = 2
 local AF_INET6    = 10
+if ffi.os == "OSX" then
+    AF_INET6 = 30
+end
 
 
 local _M = {_VERSION = 0.2}
