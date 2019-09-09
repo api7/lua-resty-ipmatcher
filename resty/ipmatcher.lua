@@ -9,6 +9,7 @@ local pairs       = pairs
 local ffi         = require "ffi"
 local ffi_cdef    = ffi.cdef
 local ffi_new     = ffi.new
+local C           = ffi.C
 local insert_tab  = table.insert
 local string      = string
 local io          = io
@@ -20,6 +21,8 @@ local str_sub     = string.sub
 local concat_tab  = table.concat
 local cur_level   = ngx.config.subsystem == "http" and
                     require "ngx.errlog" .get_sys_filter_level()
+local AF_INET     = 2
+local AF_INET6    = 10
 
 
 local _M = {_VERSION = 0.1}
@@ -53,28 +56,44 @@ local function load_shared_lib(so_name)
 end
 
 
-local lib_name = "librestyipmatcher.so"
-if ffi.os == "OSX" then
-    lib_name = "librestyipmatcher.dylib"
-end
-
-
-local libip, tried_paths = load_shared_lib(lib_name)
-if not libip then
-    tried_paths[#tried_paths + 1] = 'tried above paths but can not load '
-                                    .. lib_name
-    error(table.concat(tried_paths, '\r\n', 1, #tried_paths))
-end
-
-
-
 ffi_cdef[[
-    unsigned int inet_network(const char *cp);
-
-    int ip_is_valid_ipv4(const char *ipv4);
-    int ip_is_valid_ipv6(const char *ipv6);
-    int ip_parse_ipv6(const char *ipv6, int *addr_items);
+    int inet_pton(int af, const char * restrict src, void * restrict dst);
+    uint32_t ntohl(uint32_t netlong);
 ]]
+
+
+local function parse_ipv4(ip)
+    if not ip then
+        return false
+    end
+
+    local inet = ffi_new("unsigned int [1]")
+    if C.inet_pton(AF_INET, ip, inet) ~= 1 then
+        return false
+    end
+
+    return C.ntohl(inet[0])
+end
+
+
+
+local function parse_ipv6(ip)
+    if not ip then
+        return false
+    end
+
+    local inets = ffi_new("unsigned int [4]")
+    if C.inet_pton(AF_INET6, ip, inets) ~= 1 then
+        return false
+    end
+
+    local inets_arr = new_tab(4, 0)
+    for i = 0, 3 do
+        insert_tab(inets_arr, inets[i])
+    end
+    return inets_arr
+end
+
 
 
 local mt = {__index = _M}
@@ -102,25 +121,21 @@ local function split_ip(ip_addr_org)
     return ip_addr, tonumber(ip_addr_mask)
 end
 
-    local t = new_tab(4, 0)
-local function gen_ipv6_idx(ip, mask)
-    local inet_items = ffi_new("unsigned int [4]")
-    local ret = libip.ip_parse_ipv6(ip, inet_items)
-    if ret ~= 0 then
-        error("failed to parse ipv6 address: " .. ip, 2)
-    end
+    local tmp = {}
+local function gen_ipv6_idxs(inets_ipv6, mask, idxs)
+    idxs = idxs or tmp
+    clear_tab(idxs)
 
-    clear_tab(t)
-    for i = 0, 3 do
+    for _, inet in ipairs(inets_ipv6) do
         local valid_mask = mask
         if valid_mask > 32 then
             valid_mask = 32
         end
 
         if valid_mask == 32 then
-            insert_tab(t, inet_items[i])
+            insert_tab(idxs, inet)
         else
-            insert_tab(t, bit.rshift(inet_items[i], 32 - valid_mask))
+            insert_tab(idxs, bit.rshift(inet, 32 - valid_mask))
         end
 
         mask = mask - 32
@@ -129,7 +144,7 @@ local function gen_ipv6_idx(ip, mask)
         end
     end
 
-    return concat_tab(t, "#")
+    return idxs
 end
 
 
@@ -146,15 +161,14 @@ function _M.new(ips)
     for _, ip_addr_org in ipairs(ips) do
         local ip_addr, ip_addr_mask = split_ip(ip_addr_org)
 
-        local is_ipv4 = libip.ip_is_valid_ipv4(ip_addr) == 0
-        if is_ipv4 then
+        local inet_ipv4 = parse_ipv4(ip_addr)
+        if inet_ipv4 then
             ip_addr_mask = ip_addr_mask or 32
             if ip_addr_mask == 32 then
                 parsed_ipv4s[ip_addr] = true
 
             else
-                local inet_addr = libip.inet_network(ip_addr)
-                local valid_inet_addr = bit.rshift(inet_addr, 32 - ip_addr_mask)
+                local valid_inet_addr = bit.rshift(inet_ipv4, 32 - ip_addr_mask)
 
                 parsed_ipv4s[ip_addr_mask] = parsed_ipv4s[ip_addr_mask] or {}
                 parsed_ipv4s[ip_addr_mask][valid_inet_addr] = true
@@ -164,26 +178,32 @@ function _M.new(ips)
             end
         end
 
-        local is_ipv6 = libip.ip_is_valid_ipv6(ip_addr) == 0
-        if is_ipv6 then
+        local inets_ipv6 = parse_ipv6(ip_addr)
+        if inets_ipv6 then
             ip_addr_mask = ip_addr_mask or 128
             if ip_addr_mask == 128 then
                 parsed_ipv6s[ip_addr] = true
+
             else
-                local inet_items = ffi_new("unsigned int [4]")
-                local ret = libip.ip_parse_ipv6(ip_addr, inet_items)
-                if ret ~= 0 then
-                    error("failed to parse ipv6 address: " .. ip_addr)
+                parsed_ipv6s[ip_addr_mask] = parsed_ipv6s[ip_addr_mask] or {}
+
+                local inets_idxs = gen_ipv6_idxs(ip_addr, ip_addr_mask)
+
+                local node = parsed_ipv6s[ip_addr_mask]
+                for i, inet in ipairs(inets_idxs) do
+                    if i == #inets_idxs then
+                        node[inet] = true
+                    elseif not node[inet] then
+                        node[inet] = {}
+                        node = node[inet]
+                    end
                 end
 
-                parsed_ipv6s[ip_addr_mask] = parsed_ipv6s[ip_addr_mask] or {}
-                local ipv6_idx = gen_ipv6_idx(ip_addr, ip_addr_mask)
-                parsed_ipv6s[ip_addr_mask][ipv6_idx] = true
                 parsed_ipv6s_mask[ip_addr_mask] = true
             end
         end
 
-        if not is_ipv4 and not is_ipv6 then
+        if not inet_ipv4 and not inets_ipv6 then
             return nil, "invalid ip address: " .. ip_addr
         end
     end
@@ -211,20 +231,19 @@ end
 
 
 function _M.match(self, ip)
-    local is_ipv4 = libip.ip_is_valid_ipv4(ip) == 0
-    if is_ipv4 then
+    local inet_ipv4 = parse_ipv4(ip)
+    if inet_ipv4 then
         local ipv4s = self.ipv4
         if ipv4s[ip] then
             return true
         end
 
-        local inet_addr = libip.inet_network(ip)
         for _, mask in ipairs(self.ipv4_mask_arr) do
             if mask == 0 then
                 return true -- match any ip
             end
 
-            local valid_inet_addr = bit.rshift(inet_addr, 32 - mask)
+            local valid_inet_addr = bit.rshift(inet_ipv4, 32 - mask)
 
             log_info("ipv4 mask: ", mask,
                      " valid inet: ", valid_inet_addr)
@@ -237,8 +256,8 @@ function _M.match(self, ip)
         return false
     end
 
-    local is_ipv6 = libip.ip_is_valid_ipv6(ip) == 0
-    if not is_ipv6 then
+    local inets_ipv6 = parse_ipv6(ip)
+    if not inets_ipv6 then
         return false, "invalid ip address, not ipv4 and ipv6"
     end
 
@@ -247,20 +266,21 @@ function _M.match(self, ip)
         return true
     end
 
-    local inet_items = ffi_new("unsigned int [4]")
-    local ret = libip.ip_parse_ipv6(ip, inet_items)
-    if ret ~= 0 then
-        error("failed to parse ipv6 address: " .. ip, 2)
-    end
-
     for _, mask in ipairs(self.ipv6_mask_arr) do
         if mask == 0 then
             return true -- match any ip
         end
 
-        local idx = gen_ipv6_idx(ip, mask)
-        if ipv6s[mask][idx] then
-            return true
+        local node = ipv6s[mask]
+        local inet_idxs = gen_ipv6_idxs(inets_ipv6, mask)
+        for i, inet in ipairs(inet_idxs) do
+            if not node[inet] then
+                break
+            else
+                if node[inet] == true then
+                    return true
+                end
+            end
         end
     end
 
