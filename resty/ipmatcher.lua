@@ -5,6 +5,7 @@ local new_tab     = base.new_tab
 local find_str    = string.find
 local tonumber    = tonumber
 local ipairs      = ipairs
+local pairs       = pairs
 local ffi         = require "ffi"
 local ffi_cdef    = ffi.cdef
 local ffi_new     = ffi.new
@@ -187,9 +188,24 @@ function _M.new(ips)
         end
     end
 
+    local ipv4_mask_arr = {}
+    for k, _ in pairs(parsed_ipv4s_mask) do
+        insert_tab(ipv4_mask_arr, k)
+    end
+
+    local ipv6_mask_arr = {}
+    for k, _ in pairs(parsed_ipv6s_mask) do
+        insert_tab(ipv6_mask_arr, k)
+    end
+
     return setmetatable({
-        ipv4 = parsed_ipv4s, ipv4_mask = parsed_ipv4s_mask,
-        ipv6 = parsed_ipv6s, ipv6_mask = parsed_ipv6s_mask,
+        ipv4 = parsed_ipv4s,
+        ipv4_mask = parsed_ipv4s_mask,
+        ipv4_mask_arr = ipv4_mask_arr,
+
+        ipv6 = parsed_ipv6s,
+        ipv6_mask = parsed_ipv6s_mask,
+        ipv6_mask_arr = ipv6_mask_arr,
     }, mt)
 end
 
@@ -203,7 +219,7 @@ function _M.match(self, ip)
         end
 
         local inet_addr = libip.inet_network(ip)
-        for mask, _ in pairs(self.ipv4_mask) do
+        for _, mask in ipairs(self.ipv4_mask_arr) do
             if mask == 0 then
                 return true -- match any ip
             end
@@ -234,10 +250,10 @@ function _M.match(self, ip)
     local inet_items = ffi_new("unsigned int [4]")
     local ret = libip.ip_parse_ipv6(ip, inet_items)
     if ret ~= 0 then
-        error("failed to parse ipv6 address: " .. ip)
+        error("failed to parse ipv6 address: " .. ip, 2)
     end
 
-    for mask, _ in pairs(self.ipv6_mask) do
+    for _, mask in ipairs(self.ipv6_mask_arr) do
         if mask == 0 then
             return true -- match any ip
         end
