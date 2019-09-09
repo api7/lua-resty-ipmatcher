@@ -67,3 +67,48 @@ false
 true
 false
 false
+
+
+
+=== TEST 3: invalid ip address
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip, err = require("resty.ipmatcher").new({
+                "127.0.0.ffff",
+            })
+
+            ngx.say("ip: ", ip)
+            ngx.say("err:", err)
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+ip: nil
+err:invalid ip address: 127.0.0.ffff
+
+
+
+=== TEST 4: invalid ip address
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new({
+                "127.0.0.1",
+            })
+
+            local ok, err = ip:match("127.0.0.ffff")
+            ngx.say("ok: ", ok)
+            ngx.say("err:", err)
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+ok: false
+err:invalid ip address, not ipv4 and ipv6

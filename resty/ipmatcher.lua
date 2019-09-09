@@ -181,6 +181,10 @@ function _M.new(ips)
                 parsed_ipv6s_mask[ip_addr_mask] = true
             end
         end
+
+        if not is_ipv4 and not is_ipv6 then
+            return nil, "invalid ip address: " .. ip_addr
+        end
     end
 
     return setmetatable({
@@ -219,7 +223,7 @@ function _M.match(self, ip)
 
     local is_ipv6 = libip.ip_is_valid_ipv6(ip) == 0
     if not is_ipv6 then
-        return error("invalid ip address, not ipv4 and ipv6", 2)
+        return false, "invalid ip address, not ipv4 and ipv6"
     end
 
     local ipv6s = self.ipv6
