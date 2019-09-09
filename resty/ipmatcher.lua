@@ -12,48 +12,18 @@ local ffi_new     = ffi.new
 local C           = ffi.C
 local insert_tab  = table.insert
 local string      = string
-local io          = io
-local package     = package
 local setmetatable=setmetatable
 local type        = type
 local error       = error
 local str_sub     = string.sub
-local concat_tab  = table.concat
 local cur_level   = ngx.config.subsystem == "http" and
                     require "ngx.errlog" .get_sys_filter_level()
+
 local AF_INET     = 2
 local AF_INET6    = 10
 
 
 local _M = {_VERSION = 0.1}
-
-
-local function load_shared_lib(so_name)
-    local string_gmatch = string.gmatch
-    local string_match = string.match
-    local io_open = io.open
-    local io_close = io.close
-
-    local cpath = package.cpath
-    local tried_paths = new_tab(32, 0)
-    local i = 1
-
-    for k, _ in string_gmatch(cpath, "[^;]+") do
-        local fpath = string_match(k, "(.*/)")
-        fpath = fpath .. so_name
-        -- Don't get me wrong, the only way to know if a file exist is trying
-        -- to open it.
-        local f = io_open(fpath)
-        if f ~= nil then
-            io_close(f)
-            return ffi.load(fpath)
-        end
-        tried_paths[i] = fpath
-        i = i + 1
-    end
-
-    return nil, tried_paths
-end
 
 
 ffi_cdef[[
@@ -89,7 +59,7 @@ local function parse_ipv6(ip)
 
     local inets_arr = new_tab(4, 0)
     for i = 0, 3 do
-        insert_tab(inets_arr, inets[i])
+        insert_tab(inets_arr, C.ntohl(inets[i]))
     end
     return inets_arr
 end

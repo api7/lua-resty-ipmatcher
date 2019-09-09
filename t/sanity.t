@@ -112,3 +112,25 @@ GET /t
 --- response_body
 ok: false
 err:invalid ip address, not ipv4 and ipv6
+
+
+
+=== TEST 5: ipv6 address (short mask)
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new({
+                "fe80::/8",
+            })
+
+            ngx.say(ip:match("fe81::"))
+            ngx.say(ip:match("ff80::"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+true
+false
