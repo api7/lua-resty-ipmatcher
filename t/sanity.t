@@ -8,7 +8,7 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: sanity
+=== TEST 1: ipv4 address
 --- config
     location /t {
         content_by_lua_block {
@@ -36,4 +36,34 @@ true
 false
 true
 true
+false
+
+
+
+=== TEST 2: ipv6 address
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new({
+                "::1",
+                "fe80::/32",
+            })
+
+            ngx.say(ip:match("::1"))
+            ngx.say(ip:match("::2"))
+            ngx.say(ip:match("fe80::"))
+            ngx.say(ip:match("fe80:1::"))
+
+            ngx.say(ip:match("127.0.0.1"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+true
+false
+true
+false
 false

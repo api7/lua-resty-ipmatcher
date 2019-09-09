@@ -5,7 +5,7 @@
 
 
 int
-is_valid_ipv4(const char *ipv4)
+ip_is_valid_ipv4(const char *ipv4)
 {
     struct      in_addr addr;
 
@@ -22,7 +22,7 @@ is_valid_ipv4(const char *ipv4)
 
 
 int
-is_valid_ipv6(const char *ipv6)
+ip_is_valid_ipv6(const char *ipv6)
 {
     struct in6_addr addr6;
 
@@ -38,7 +38,7 @@ is_valid_ipv6(const char *ipv6)
 }
 
 int
-parse_ipv6(const char *ipv6, unsigned int *addr_32)
+ip_parse_ipv6(const char *ipv6, unsigned int *addr_32)
 {
     unsigned int       addr6[4];
     int                i;
