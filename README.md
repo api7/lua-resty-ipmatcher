@@ -1,12 +1,12 @@
-# lua-resty-ip-matcher
+# lua-resty-ipmatcher
 
 High performance match IP address for OpenResty Lua.
 
 ## API
 
-
 ```lua
-local ip = require("resty.ipmatcher").new({
+local ipmatcher = require("resty.ipmatcher")
+local ip = ipmatcher.new({
     "127.0.0.1",
     "192.168.0.0/16",
     "::1",
@@ -22,7 +22,8 @@ ngx.say(ip.match("::1"))
 
 `syntax: ok, err = ipmatcher.new(ips)`
 
-The `ips` is a array table, like `{ip1, ip2, ip3, ...}`, Each element in the array is a IP address string.
+The `ips` is a array table, like `{ip1, ip2, ip3, ...}`,
+each element in the array is a string IP address.
 
 ```lua
 local ip, err = ipmatcher:new({"127.0.0.1", "192.168.0.0/16"})
@@ -43,9 +44,9 @@ local ip, err = ipmatcher.new({
 
 `syntax: ok, err = ip:match(ip)`
 
-Returns a `true` or `false` if the IP exists within any of the specified IP list.
+Returns a `true` if the IP exists within any of the specified IP list.
 
-Returns `nil` and an error message with an invalid IP.
+Returns `nil` and an error message with an invalid IP address.
 
 ```lua
 local ok, err = ip:match("127.0.0.1")
