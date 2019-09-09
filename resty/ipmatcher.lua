@@ -187,8 +187,7 @@ function _M.new(ips)
             else
                 parsed_ipv6s[ip_addr_mask] = parsed_ipv6s[ip_addr_mask] or {}
 
-                local inets_idxs = gen_ipv6_idxs(ip_addr, ip_addr_mask)
-
+                local inets_idxs = gen_ipv6_idxs(inets_ipv6, ip_addr_mask)
                 local node = parsed_ipv6s[ip_addr_mask]
                 for i, inet in ipairs(inets_idxs) do
                     if i == #inets_idxs then
@@ -273,13 +272,14 @@ function _M.match(self, ip)
 
         local node = ipv6s[mask]
         local inet_idxs = gen_ipv6_idxs(inets_ipv6, mask)
-        for i, inet in ipairs(inet_idxs) do
+        for _, inet in ipairs(inet_idxs) do
             if not node[inet] then
                 break
             else
                 if node[inet] == true then
                     return true
                 end
+                node = node[inet]
             end
         end
     end
