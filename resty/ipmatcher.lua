@@ -47,7 +47,7 @@ local function parse_ipv4(ip)
 
     return C.ntohl(inet[0])
 end
-
+_M.parse_ipv4 = parse_ipv4
 
 
 local function parse_ipv6(ip)
@@ -66,7 +66,7 @@ local function parse_ipv6(ip)
     end
     return inets_arr
 end
-
+_M.parse_ipv6 = parse_ipv6
 
 
 local mt = {__index = _M}
@@ -93,10 +93,11 @@ local function split_ip(ip_addr_org)
     local ip_addr_mask = str_sub(ip_addr_org, idx + 1)
     return ip_addr, tonumber(ip_addr_mask)
 end
+_M.split_ip = split_ip
 
-    local tmp = {}
-local function gen_ipv6_idxs(inets_ipv6, mask, idxs)
-    idxs = idxs or tmp
+
+    local idxs = {}
+local function gen_ipv6_idxs(inets_ipv6, mask)
     clear_tab(idxs)
 
     for _, inet in ipairs(inets_ipv6) do
