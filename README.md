@@ -51,3 +51,20 @@ Returns `nil` and an error message with an invalid IP address.
 ```lua
 local ok, err = ip:match("127.0.0.1")
 ```
+
+## ipmatcher.parse_ipv4
+
+`syntax: res = ipmatcher.parse_ipv4(ip)`
+
+Tries to parse an IPv4 address to host byte order.
+
+Returns a `false` if the ip is not a valid IPv4 address.
+
+
+## ipmatcher.parse_ipv6
+
+`syntax: res = ipmatcher.parse_ipv6(ip)`
+
+Tries to parse an IPv6 address to host byte order.
+
+Returns a `false` if the ip is not a valid IPv6 address.
