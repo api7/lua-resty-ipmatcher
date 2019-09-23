@@ -13,9 +13,9 @@ local ip = ipmatcher.new({
     "fe80::/32",
 })
 
-ngx.say(ip.match("127.0.0.1"))
-ngx.say(ip.match("192.168.1.100"))
-ngx.say(ip.match("::1"))
+ngx.say(ip:match("127.0.0.1"))
+ngx.say(ip:match("192.168.1.100"))
+ngx.say(ip:match("::1"))
 ```
 
 ## ipmatcher.new
@@ -26,7 +26,7 @@ The `ips` is a array table, like `{ip1, ip2, ip3, ...}`,
 each element in the array is a string IP address.
 
 ```lua
-local ip, err = ipmatcher:new({"127.0.0.1", "192.168.0.0/16"})
+local ip, err = ipmatcher.new({"127.0.0.1", "192.168.0.0/16"})
 ```
 
 Returns `nil` and error message if failed to create new `ipmatcher` instance.
