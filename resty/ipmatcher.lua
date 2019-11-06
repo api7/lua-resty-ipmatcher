@@ -16,6 +16,7 @@ local setmetatable=setmetatable
 local type        = type
 local error       = error
 local str_sub     = string.sub
+local str_byte    = string.byte
 local cur_level   = ngx.config.subsystem == "http" and
                     require "ngx.errlog" .get_sys_filter_level()
 
@@ -53,6 +54,11 @@ _M.parse_ipv4 = parse_ipv4
 local function parse_ipv6(ip)
     if not ip then
         return false
+    end
+
+    if str_byte(ip, 1, 1) == str_byte('[') then
+        -- strip square brackets around IPv6 literal if present
+        ip = str_sub(ip, 2, #ip - 1)
     end
 
     local inets = ffi_new("unsigned int [4]")
