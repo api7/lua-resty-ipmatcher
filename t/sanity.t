@@ -147,6 +147,7 @@ false
                 {ip = "["},
                 {ip = "[]"},
                 {ip = "[:1:]"},
+                {ip = "[::1x"},
                 {ip = "127.0.0.1"},
             }
             for _, case in ipairs(cases) do

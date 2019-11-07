@@ -56,7 +56,9 @@ local function parse_ipv6(ip)
         return false
     end
 
-    if str_byte(ip, 1, 1) == str_byte('[') then
+    if str_byte(ip, 1, 1) == str_byte('[')
+        and str_byte(ip, #ip) == str_byte(']') then
+
         -- strip square brackets around IPv6 literal if present
         ip = str_sub(ip, 2, #ip - 1)
     end
