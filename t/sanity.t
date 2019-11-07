@@ -134,3 +134,43 @@ GET /t
 --- response_body
 true
 false
+
+
+
+=== TEST 6: parse ipv6 address
+--- config
+    location /t {
+        content_by_lua_block {
+            local cases = {
+                {ip = "127.0.0.ffff"},
+                {ip = ""},
+                {ip = "["},
+                {ip = "[]"},
+                {ip = "[:1:]"},
+                {ip = "[::1x"},
+                {ip = "127.0.0.1"},
+            }
+            for _, case in ipairs(cases) do
+                local valid = require("resty.ipmatcher").parse_ipv6(case.ip)
+                if valid then
+                    ngx.log(ngx.ERR, "expect invalid IPv6 ", case.ip)
+                end
+            end
+
+            local cases = {
+                {ip = "::1"},
+                {ip = "[::1]"},
+                {ip = "ff80::"},
+            }
+            for _, case in ipairs(cases) do
+                local valid = require("resty.ipmatcher").parse_ipv6(case.ip)
+                if not valid then
+                    ngx.log(ngx.ERR, "expect IPv6 ", case.ip)
+                end
+            end
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]

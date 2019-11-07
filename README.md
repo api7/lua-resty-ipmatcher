@@ -65,6 +65,7 @@ Returns a `false` if the ip is not a valid IPv4 address.
 
 `syntax: res = ipmatcher.parse_ipv6(ip)`
 
-Tries to parse an IPv6 address to host byte order.
+Tries to parse an IPv6 address to host byte order. The given IPv6 address
+can be wrapped by square brackets like `[::1]`.
 
 Returns a `false` if the ip is not a valid IPv6 address.
