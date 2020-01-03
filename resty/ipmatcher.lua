@@ -27,7 +27,7 @@ if ffi.os == "OSX" then
 end
 
 
-local _M = {_VERSION = 0.2}
+local _M = {_VERSION = 0.3}
 
 
 ffi_cdef[[
