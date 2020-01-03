@@ -36,43 +36,51 @@ ffi_cdef[[
 ]]
 
 
-local function parse_ipv4(ip)
-    if not ip then
-        return false
-    end
-
+local parse_ipv4
+do
     local inet = ffi_new("unsigned int [1]")
-    if C.inet_pton(AF_INET, ip, inet) ~= 1 then
-        return false
-    end
 
-    return C.ntohl(inet[0])
+    function parse_ipv4(ip)
+        if not ip then
+            return false
+        end
+
+        if C.inet_pton(AF_INET, ip, inet) ~= 1 then
+            return false
+        end
+
+        return C.ntohl(inet[0])
+    end
 end
 _M.parse_ipv4 = parse_ipv4
 
 
-local function parse_ipv6(ip)
-    if not ip then
-        return false
-    end
-
-    if str_byte(ip, 1, 1) == str_byte('[')
-        and str_byte(ip, #ip) == str_byte(']') then
-
-        -- strip square brackets around IPv6 literal if present
-        ip = str_sub(ip, 2, #ip - 1)
-    end
-
+local parse_ipv6
+do
     local inets = ffi_new("unsigned int [4]")
-    if C.inet_pton(AF_INET6, ip, inets) ~= 1 then
-        return false
-    end
 
-    local inets_arr = new_tab(4, 0)
-    for i = 0, 3 do
-        insert_tab(inets_arr, C.ntohl(inets[i]))
+    function parse_ipv6(ip)
+        if not ip then
+            return false
+        end
+
+        if str_byte(ip, 1, 1) == str_byte('[')
+            and str_byte(ip, #ip) == str_byte(']') then
+
+            -- strip square brackets around IPv6 literal if present
+            ip = str_sub(ip, 2, #ip - 1)
+        end
+
+        if C.inet_pton(AF_INET6, ip, inets) ~= 1 then
+            return false
+        end
+
+        local inets_arr = new_tab(4, 0)
+        for i = 0, 3 do
+            insert_tab(inets_arr, C.ntohl(inets[i]))
+        end
+        return inets_arr
     end
-    return inets_arr
 end
 _M.parse_ipv6 = parse_ipv6
 
