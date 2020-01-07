@@ -8,6 +8,7 @@ local ipairs      = ipairs
 local pairs       = pairs
 local ffi         = require "ffi"
 local ffi_cdef    = ffi.cdef
+local ffi_copy    = ffi.copy
 local ffi_new     = ffi.new
 local C           = ffi.C
 local insert_tab  = table.insert
@@ -54,6 +55,19 @@ do
 end
 _M.parse_ipv4 = parse_ipv4
 
+local parse_bin_ipv4
+do
+    local inet = ffi_new("unsigned int [1]")
+
+    function parse_bin_ipv4(ip)
+        if not ip or #ip ~= 4 then
+            return false
+        end
+
+        ffi_copy(inet, ip, 4)
+        return C.ntohl(inet[0])
+    end
+end
 
 local parse_ipv6
 do
@@ -83,6 +97,24 @@ do
     end
 end
 _M.parse_ipv6 = parse_ipv6
+
+local parse_bin_ipv6
+do
+    local inets = ffi_new("unsigned int [4]")
+
+    function parse_bin_ipv6(ip)
+        if not ip or #ip ~= 16 then
+            return false
+        end
+
+        ffi_copy(inets, ip, 16)
+        local inets_arr = new_tab(4, 0)
+        for i = 0, 3 do
+            insert_tab(inets_arr, C.ntohl(inets[i]))
+        end
+        return inets_arr
+    end
+end
 
 
 local mt = {__index = _M}
@@ -155,14 +187,13 @@ function _M.new(ips)
         if inet_ipv4 then
             ip_addr_mask = ip_addr_mask or 32
             if ip_addr_mask == 32 then
-                parsed_ipv4s[ip_addr] = true
+                parsed_ipv4s[inet_ipv4] = true
 
             else
                 local valid_inet_addr = bit.rshift(inet_ipv4, 32 - ip_addr_mask)
 
-                parsed_ipv4s[ip_addr_mask] = parsed_ipv4s[ip_addr_mask] or {}
-                parsed_ipv4s[ip_addr_mask][valid_inet_addr] = true
-                parsed_ipv4s_mask[ip_addr_mask] = true
+                parsed_ipv4s_mask[ip_addr_mask] = parsed_ipv4s[ip_addr_mask] or {}
+                parsed_ipv4s_mask[ip_addr_mask][valid_inet_addr] = true
                 log_info("ipv4 mask: ", ip_addr_mask,
                          " valid inet: ", valid_inet_addr)
             end
@@ -173,23 +204,22 @@ function _M.new(ips)
             ip_addr_mask = ip_addr_mask or 128
             if ip_addr_mask == 128 then
                 parsed_ipv6s[ip_addr] = true
-
-            else
-                parsed_ipv6s[ip_addr_mask] = parsed_ipv6s[ip_addr_mask] or {}
-
-                local inets_idxs = gen_ipv6_idxs(inets_ipv6, ip_addr_mask)
-                local node = parsed_ipv6s[ip_addr_mask]
-                for i, inet in ipairs(inets_idxs) do
-                    if i == #inets_idxs then
-                        node[inet] = true
-                    elseif not node[inet] then
-                        node[inet] = {}
-                        node = node[inet]
-                    end
-                end
-
-                parsed_ipv6s_mask[ip_addr_mask] = true
             end
+
+            parsed_ipv6s[ip_addr_mask] = parsed_ipv6s[ip_addr_mask] or {}
+
+            local inets_idxs = gen_ipv6_idxs(inets_ipv6, ip_addr_mask)
+            local node = parsed_ipv6s[ip_addr_mask]
+            for i, inet in ipairs(inets_idxs) do
+                if i == #inets_idxs then
+                    node[inet] = true
+                elseif not node[inet] then
+                    node[inet] = {}
+                    node = node[inet]
+                end
+            end
+
+            parsed_ipv6s_mask[ip_addr_mask] = true
         end
 
         if not inet_ipv4 and not inets_ipv6 then
@@ -219,49 +249,40 @@ function _M.new(ips)
 end
 
 
-function _M.match(self, ip)
-    local inet_ipv4 = parse_ipv4(ip)
-    if inet_ipv4 then
-        local ipv4s = self.ipv4
-        if ipv4s[ip] then
-            return true
-        end
-
-        for _, mask in ipairs(self.ipv4_mask_arr) do
-            if mask == 0 then
-                return true -- match any ip
-            end
-
-            local valid_inet_addr = bit.rshift(inet_ipv4, 32 - mask)
-
-            log_info("ipv4 mask: ", mask,
-                     " valid inet: ", valid_inet_addr)
-
-            if ipv4s[mask][valid_inet_addr] then
-                return true
-            end
-        end
-
-        return false
-    end
-
-    local inets_ipv6 = parse_ipv6(ip)
-    if not inets_ipv6 then
-        return false, "invalid ip address, not ipv4 and ipv6"
-    end
-
-    local ipv6s = self.ipv6
-    if ipv6s[ip] then
+local function match_ipv4(self, ip)
+    local ipv4s = self.ipv4
+    if ipv4s[ip] then
         return true
     end
 
+    local ipv4_mask = self.ipv4_mask
+    for _, mask in ipairs(self.ipv4_mask_arr) do
+        if mask == 0 then
+            return true -- match any ip
+        end
+
+        local valid_inet_addr = bit.rshift(ip, 32 - mask)
+
+        log_info("ipv4 mask: ", mask,
+                 " valid inet: ", valid_inet_addr)
+
+        if ipv4_mask[mask][valid_inet_addr] then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function match_ipv6(self, ip)
+    local ipv6s = self.ipv6
     for _, mask in ipairs(self.ipv6_mask_arr) do
         if mask == 0 then
             return true -- match any ip
         end
 
         local node = ipv6s[mask]
-        local inet_idxs = gen_ipv6_idxs(inets_ipv6, mask)
+        local inet_idxs = gen_ipv6_idxs(ip, mask)
         for _, inet in ipairs(inet_idxs) do
             if not node[inet] then
                 break
@@ -275,6 +296,40 @@ function _M.match(self, ip)
     end
 
     return false
+end
+
+function _M.match(self, ip)
+    local inet_ipv4 = parse_ipv4(ip)
+    if inet_ipv4 then
+        return match_ipv4(self, inet_ipv4)
+    end
+
+    local inets_ipv6 = parse_ipv6(ip)
+    if not inets_ipv6 then
+        return false, "invalid ip address, not ipv4 and ipv6"
+    end
+
+    local ipv6s = self.ipv6
+    if ipv6s[ip] then
+        return true
+    end
+
+    return match_ipv6(self, inets_ipv6)
+end
+
+
+function _M.match_bin(self, bin_ip)
+    local inet_ipv4 = parse_bin_ipv4(bin_ip)
+    if inet_ipv4 then
+        return match_ipv4(self, inet_ipv4)
+    end
+
+    local inets_ipv6 = parse_bin_ipv6(bin_ip)
+    if not inets_ipv6 then
+        return false, "invalid ip address, not ipv4 and ipv6"
+    end
+
+    return match_ipv6(self, inets_ipv6)
 end
 
 

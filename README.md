@@ -52,6 +52,18 @@ Returns `nil` and an error message with an invalid IP address.
 local ok, err = ip:match("127.0.0.1")
 ```
 
+## ip.match_bin
+
+`syntax: ok, err = ip:match_bin(bin_ip)`
+
+Returns a `true` if the binary format IP exists within any of the specified IP list.
+
+Returns `nil` and an error message with an invalid binary IP address.
+
+```lua
+local ok, err = ip:match_bin(ngx.var.binary_remote_addr)
+```
+
 ## ipmatcher.parse_ipv4
 
 `syntax: res = ipmatcher.parse_ipv4(ip)`
