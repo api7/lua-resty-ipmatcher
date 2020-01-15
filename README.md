@@ -45,8 +45,8 @@ local ip, err = ipmatcher.new({
 `syntax: ok, err = ip:match(ip)`
 
 Returns a `true` if the IP exists within any of the specified IP list.
-
-Returns `nil` and an error message with an invalid IP address.
+Returns a `false` if the IP doesn't exist within any of the specified IP list.
+Returns `false` and an error message with an invalid IP address.
 
 ```lua
 local ok, err = ip:match("127.0.0.1")
