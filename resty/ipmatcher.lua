@@ -170,14 +170,6 @@ local function gen_ipv6_idxs(inets_ipv6, mask)
 end
 
 
-local function iter_ips_with_value(ips)
-    return pairs(ips)
-end
-
-local function iter_ips(ips)
-    return ipairs(ips)
-end
-
 local function new(ips, with_value)
     if not ips or type(ips) ~= "table" then
         error("missing valid ip argument", 2)
@@ -193,7 +185,7 @@ local function new(ips, with_value)
     local ipv6s_values_idx = 1
     local ipv6_match_all_value
 
-    local iter = with_value and iter_ips_with_value or iter_ips
+    local iter = with_value and pairs or ipairs
     for a, b in iter(ips) do
         local ip_addr_org, value
         if with_value then
