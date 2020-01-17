@@ -40,6 +40,50 @@ local ip, err = ipmatcher.new({
     })
 ```
 
+## ipmatcher.new_with_value
+
+`syntax: matcher, err = ipmatcher.new_with_value(ips)`
+
+The `ips` is a hash table, like `{[ip1] = val1, [ip2] = val2, ...}`,
+each key in the hash is a string IP address.
+
+When the `matcher` is created by `new_with_value`, calling `match` or `match_bin`
+on it will return the corresponding value of matched CIDR range instead of `true`.
+
+```lua
+local ip, err = ipmatcher.new_with_value({
+    ["127.0.0.1"] = {info = "a"},
+    ["192.168.0.0/16"] = {info = "b"},
+})
+local data, err = ip:match("192.168.0.1")
+print(data.info) -- the value is "b"
+```
+
+Returns `nil` and error message if failed to create new `ipmatcher` instance.
+
+It supports any CIDR format for IPv4 and IPv6.
+
+```lua
+local ip, err = ipmatcher.new_with_value({
+    ["127.0.0.1"] = {info = "a"},
+    ["192.168.0.0/16"] = {info = "b"},
+    ["::1"] = 1,
+    ["fe80::/32"] = "xx",
+})
+```
+
+If the ip address can be satified by multiple CIDR ranges, the returned value
+is undefined (depended on the internal implementation). For instance,
+
+```lua
+local ip, err = ipmatcher.new_with_value({
+    ["192.168.0.1"] = {info = "a"},
+    ["192.168.0.0/16"] = {info = "b"},
+})
+local data, err = ip:match("192.168.0.1")
+print(data.info) -- the value can be "a" or "b"
+```
+
 ## ip.match
 
 `syntax: ok, err = ip:match(ip)`

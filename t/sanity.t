@@ -316,3 +316,72 @@ true
 true
 true
 true
+
+
+
+=== TEST 10: match with new_with_value
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new_with_value({
+                ["127.0.0.1"] = 1,
+                ["192.168.0.0/16"] = "2",
+                ["::1"] = 3,
+                ["fe80::/32"] = {value = 4},
+                ["fe81::/32"] = false,
+            })
+
+            ngx.say(ip:match("127.0.0.1"))
+            ngx.say(ip:match("127.0.0.2"))
+            ngx.say(ip:match("192.168.1.1"))
+            ngx.say(ip:match("192.168.1.100"))
+            ngx.say(ip:match("192.100.1.100"))
+            ngx.say(ip:match("::1"))
+            ngx.say(ip:match("::2"))
+            ngx.say(ip:match("fe80::").value)
+            ngx.say(ip:match("fe80:1::"))
+            ngx.say(ip:match("fe81::"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+1
+false
+2
+2
+false
+3
+false
+4
+false
+false
+
+
+
+=== TEST 11: new_with_value and zero mask
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new_with_value({
+                ["::/0"] = 1,
+                ["0.0.0.0/0"] = 2,
+            })
+
+            ngx.say(ip:match("127.0.0.1"))
+            ngx.say(ip:match("0.0.0.0"))
+            ngx.say(ip:match("fe81::"))
+            ngx.say(ip:match("ff80::"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+2
+2
+1
+1
