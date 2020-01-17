@@ -339,8 +339,7 @@ local function match_ipv6(self, ip)
                 if node == true then
                     return true
                 end
-                local ty = type(node)
-                if ty == "number" then
+                if type(node) == "number" then
                     -- fetch with the ipv6s_values_idx
                     return self.ipv6_values[node]
                 end
