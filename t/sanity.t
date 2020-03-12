@@ -385,3 +385,26 @@ GET /t
 2
 1
 1
+
+
+
+=== TEST 12: bug: ipv4 address overrided with the same mask
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new({
+                "192.168.0.0/16",
+                "192.0.0.0/16",
+            })
+
+            ngx.say(ip:match("192.168.1.1"))
+            ngx.say(ip:match("192.0.1.100"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+true
+true

@@ -211,7 +211,7 @@ local function new(ips, with_value)
             else
                 local valid_inet_addr = bit.rshift(inet_ipv4, 32 - ip_addr_mask)
 
-                parsed_ipv4s_mask[ip_addr_mask] = parsed_ipv4s[ip_addr_mask] or {}
+                parsed_ipv4s_mask[ip_addr_mask] = parsed_ipv4s_mask[ip_addr_mask] or {}
                 parsed_ipv4s_mask[ip_addr_mask][valid_inet_addr] = value
                 log_info("ipv4 mask: ", ip_addr_mask,
                          " valid inet: ", valid_inet_addr)
