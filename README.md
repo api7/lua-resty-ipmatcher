@@ -112,7 +112,7 @@ local ok, err = ip:match_bin(ngx.var.binary_remote_addr)
 
 `syntax: res = ipmatcher.parse_ipv4(ip)`
 
-Tries to parse an IPv4 address to host byte order.
+Tries to parse an IPv4 address to a host byte order FFI uint32_t type integer.
 
 Returns a `false` if the ip is not a valid IPv4 address.
 
@@ -121,7 +121,8 @@ Returns a `false` if the ip is not a valid IPv4 address.
 
 `syntax: res = ipmatcher.parse_ipv6(ip)`
 
-Tries to parse an IPv6 address to host byte order. The given IPv6 address
-can be wrapped by square brackets like `[::1]`.
+Tries to parse an IPv6 address to a table with four host byte order FFI uint32_t
+type integer.  The given IPv6 address can be wrapped by square brackets
+like `[::1]`.
 
 Returns a `false` if the ip is not a valid IPv6 address.
