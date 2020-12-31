@@ -19,7 +19,6 @@ test:
 install:
 	$(INSTALL) -d $(INST_LUADIR)/resty/
 	$(INSTALL) resty/*.lua $(INST_LUADIR)/resty/
-	$(INSTALL) $(C_SO_NAME) $(INST_LIBDIR)/
 
 
 ### help:         Show Makefile rules
