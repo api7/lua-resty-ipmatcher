@@ -243,11 +243,9 @@ local function new(ips, with_value)
                     else
                         node[inet] = true
                     end
-
-                elseif not node[inet] then
-                    node[inet] = {}
-                    node = node[inet]
                 end
+                node[inet] = node[inet] or {}
+                node = node[inet]
             end
 
             parsed_ipv6s_mask[ip_addr_mask] = true
