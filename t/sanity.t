@@ -408,3 +408,32 @@ GET /t
 --- response_body
 true
 true
+
+
+
+=== TEST 13: bug fixing: same ipv6 prefix with the same mask
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new({
+                '2409:8928:6a00::/39',
+                '2409:8928:a000::/39', -- 2409:8928:a000:: - 2409:8928:a1ff:ffff:ffff:ffff:ffff:ffff
+            })
+
+            ngx.say(ip:match("2409:8928:6a00:2a57:1:1:d823:4521"))
+            ngx.say(ip:match("2409:8928:6a01::"))
+            ngx.say(ip:match("2409:8928:a0f8:2a57:1:1:d823:4521"))
+            ngx.say(ip:match("2409:8928:a100::"))
+            ngx.say(ip:match("2409:8928:a200::"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+true
+true
+true
+true
+false
