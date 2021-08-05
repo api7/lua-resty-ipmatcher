@@ -213,6 +213,10 @@ local function new(ips, with_value)
 
                 parsed_ipv4s_mask[ip_addr_mask] = parsed_ipv4s_mask[ip_addr_mask] or {}
                 parsed_ipv4s_mask[ip_addr_mask][valid_inet_addr] = value
+
+                parsed_ipv4s[ip_addr_mask] = parsed_ipv4s[ip_addr_mask] or {}
+                parsed_ipv4s[ip_addr_mask][valid_inet_addr] = value
+
                 log_info("ipv4 mask: ", ip_addr_mask,
                          " valid inet: ", valid_inet_addr)
             end
@@ -231,24 +235,20 @@ local function new(ips, with_value)
             end
 
             parsed_ipv6s[ip_addr_mask] = parsed_ipv6s[ip_addr_mask] or {}
+            parsed_ipv6s_mask[ip_addr_mask] = parsed_ipv6s_mask[ip_addr_mask] or {}
 
             local inets_idxs = gen_ipv6_idxs(inets_ipv6, ip_addr_mask)
-            local node = parsed_ipv6s[ip_addr_mask]
             for i, inet in ipairs(inets_idxs) do
-                if i == #inets_idxs then
-                    if with_value then
-                        ipv6_values[ipv6s_values_idx] = value
-                        node[inet] = ipv6s_values_idx
-                        ipv6s_values_idx = ipv6s_values_idx + 1
-                    else
-                        node[inet] = true
-                    end
+                if with_value then
+                    ipv6_values[ipv6s_values_idx] = value
+                    parsed_ipv6s_mask[ip_addr_mask][inet] = ipv6s_values_idx
+                    parsed_ipv6s[ip_addr_mask][inet] = ipv6s_values_idx
+                    ipv6s_values_idx = ipv6s_values_idx + 1
+                else
+                    parsed_ipv6s_mask[ip_addr_mask][inet] = value
+                    parsed_ipv6s[ip_addr_mask][inet] = value
                 end
-                node[inet] = node[inet] or {}
-                node = node[inet]
             end
-
-            parsed_ipv6s_mask[ip_addr_mask] = true
 
             goto continue
         end
@@ -364,7 +364,6 @@ function _M.match(self, ip)
     if value ~= nil then
         return value
     end
-
     return match_ipv6(self, inets_ipv6)
 end
 
