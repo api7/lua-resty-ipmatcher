@@ -437,3 +437,35 @@ true
 true
 true
 false
+
+
+=== TEST 14: bug fixing: ipv4 and ipv6 with the same mask
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new({
+                '1.2.3.4/31',
+                '4.0.0.0/31',
+                '2a02:26f7:b740::/64',
+                '2a02:26f7:f6d4::/64'
+            })
+
+            ngx.say(ip:match("2a02:26f7:b740:0:0:0:0:0"))
+            ngx.say(ip:match("2a02:26f7:f6d4:0:0:0:0:0"))
+            ngx.say(ip:match("2a02:26f7:f6d4:0:0:0:ffff:ffff"))
+            ngx.say(ip:match("1.2.3.5"))
+            ngx.say(ip:match("1.2.3.4"))
+            ngx.say(ip:match("4.0.0.1"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+true
+true
+true
+true
+true
+true
