@@ -4,14 +4,16 @@ INST_LUADIR ?= $(INST_PREFIX)/share/lua/5.1
 INSTALL ?= install
 
 
-.PHONY: test
-
+### lint:         Lint Lua source code
+.PHONY: lint
+lint:
+	luacheck -q resty
 
 ### test:         Run test suite. Use test=... for specific tests
 .PHONY: test
 test:
 	TEST_NGINX_LOG_LEVEL=info \
-	prove -I../test-nginx/lib -r -s t/
+	prove -I. -I../test-nginx/lib -r t/
 
 
 ### install:      Install the library to runtime
