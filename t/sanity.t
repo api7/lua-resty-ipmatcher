@@ -437,3 +437,55 @@ true
 true
 true
 false
+
+
+
+=== TEST 14: accurate match with new_with_value
+--- config
+    location /t {
+        content_by_lua_block {
+            local ip = require("resty.ipmatcher").new_with_value({
+                ["192.168.1.1/24"] = "level3",
+                ["192.168.1.1/16"] = "level2",
+                ["192.168.1.1/8"] = "level1",
+            })
+
+            ngx.say(ip:match("192.168.1.2"))
+            ngx.say(ip:match("192.168.2.2"))
+            ngx.say(ip:match("192.2.2.2"))
+
+            local ip = require("resty.ipmatcher").new_with_value({
+                ["192.168.1.1/16"] = "level2",
+                ["192.168.1.1/8"] = "level1",
+                ["192.168.1.1/24"] = "level3",
+            })
+
+            ngx.say(ip:match("192.168.1.2"))
+            ngx.say(ip:match("192.168.2.2"))
+            ngx.say(ip:match("192.2.2.2"))
+
+            local ip = require("resty.ipmatcher").new_with_value({
+                ["192.168.1.1/8"] = "level1",
+                ["192.168.1.1/16"] = "level2",
+                ["192.168.1.1/24"] = "level3",
+            })
+
+            ngx.say(ip:match("192.168.1.2"))
+            ngx.say(ip:match("192.168.2.2"))
+            ngx.say(ip:match("192.2.2.2"))
+        }
+    }
+--- request
+GET /t
+--- no_error_log
+[error]
+--- response_body
+level3
+level2
+level1
+level3
+level2
+level1
+level3
+level2
+level1
