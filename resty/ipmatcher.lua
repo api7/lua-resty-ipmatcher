@@ -1,6 +1,7 @@
 local base        = require("resty.core.base")
 local bit         = require("bit")
 local clear_tab   = require("table.clear")
+local nkeys       = require("table.nkeys")
 local new_tab     = base.new_tab
 local find_str    = string.find
 local tonumber    = tonumber
@@ -12,6 +13,7 @@ local ffi_copy    = ffi.copy
 local ffi_new     = ffi.new
 local C           = ffi.C
 local insert_tab  = table.insert
+local sort_tab    = table.sort
 local string      = string
 local setmetatable=setmetatable
 local type        = type
@@ -120,8 +122,8 @@ end
 local mt = {__index = _M}
 
 
-    local ngx_log = ngx.log
-    local ngx_INFO = ngx.INFO
+local ngx_log = ngx.log
+local ngx_INFO = ngx.INFO
 local function log_info(...)
     if cur_level and ngx_INFO > cur_level then
         return
@@ -144,7 +146,7 @@ end
 _M.split_ip = split_ip
 
 
-    local idxs = {}
+local idxs = {}
 local function gen_ipv6_idxs(inets_ipv6, mask)
     clear_tab(idxs)
 
@@ -167,6 +169,11 @@ local function gen_ipv6_idxs(inets_ipv6, mask)
     end
 
     return idxs
+end
+
+
+local function cmp(x, y)
+    return x > y
 end
 
 
@@ -260,15 +267,24 @@ local function new(ips, with_value)
         ::continue::
     end
 
-    local ipv4_mask_arr = {}
+    local ipv4_mask_arr = new_tab(nkeys(parsed_ipv4s_mask), 0)
+    local i = 1
     for k, _ in pairs(parsed_ipv4s_mask) do
-        insert_tab(ipv4_mask_arr, k)
+        ipv4_mask_arr[i] = k
+        i = i + 1
     end
 
-    local ipv6_mask_arr = {}
+    sort_tab(ipv4_mask_arr, cmp)
+
+    local ipv6_mask_arr = new_tab(nkeys(parsed_ipv6s_mask), 0)
+
+    i = 1
     for k, _ in pairs(parsed_ipv6s_mask) do
-        insert_tab(ipv6_mask_arr, k)
+        ipv6_mask_arr[i] = k
+        i = i + 1
     end
+
+    sort_tab(ipv6_mask_arr, cmp)
 
     return setmetatable({
         ipv4 = parsed_ipv4s,
