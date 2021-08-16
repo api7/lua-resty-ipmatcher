@@ -172,6 +172,11 @@ local function gen_ipv6_idxs(inets_ipv6, mask)
 end
 
 
+local function cmp(x, y)
+    return x > y
+end
+
+
 local function new(ips, with_value)
     if not ips or type(ips) ~= "table" then
         error("missing valid ip argument", 2)
@@ -260,10 +265,6 @@ local function new(ips, with_value)
         end
 
         ::continue::
-    end
-
-    local function cmp(x, y)
-        return x > y
     end
 
     local ipv4_mask_arr = new_tab(nkeys(parsed_ipv4s_mask), 0)
