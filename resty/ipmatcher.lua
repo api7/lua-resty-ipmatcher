@@ -34,7 +34,7 @@ elseif ffi.os == "Windows" then
 end
 
 
-local _M = { }
+local _M = {}
 
 
 ffi_cdef[[
