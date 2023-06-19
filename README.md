@@ -1,54 +1,94 @@
-# lua-resty-ipmatcher
+# Name
 
-High performance match IP address for OpenResty Lua.
+High-performance IP address matching for OpenResty Lua.
 
-## API
+# Table of Contents
+
+- [Name](#name)
+- [Table of Contents](#table-of-contents)
+- [Synopsis](#synopsis)
+- [Methods](#methods)
+  - [ipmatcher.new](#ipmatchernew)
+    - [Usage](#usage)
+    - [Example](#example)
+  - [ipmatcher.new\_with\_value](#ipmatchernew_with_value)
+    - [Usage](#usage-1)
+    - [Example](#example-1)
+  - [ip:match](#ipmatch)
+    - [Usage](#usage-2)
+    - [Example](#example-2)
+  - [ip:match\_bin](#ipmatch_bin)
+    - [Usage](#usage-3)
+    - [Example](#example-3)
+  - [ipmatcher.parse\_ipv4](#ipmatcherparse_ipv4)
+  - [ipmatcher.parse\_ipv6](#ipmatcherparse_ipv6)
+- [Installation](#installation)
+  - [From LuaRocks](#from-luarocks)
+  - [From Source](#from-source)
+
+# Synopsis
 
 ```lua
-local ipmatcher = require("resty.ipmatcher")
-local ip = ipmatcher.new({
-    "127.0.0.1",
-    "192.168.0.0/16",
-    "::1",
-    "fe80::/32",
-})
+location / {
+    content_by_lua_block {
+      local ipmatcher = require("resty.ipmatcher")
+      local ip = ipmatcher.new({
+          "127.0.0.1",
+          "192.168.0.0/16",
+          "::1",
+          "fe80::/32",
+      })
 
-ngx.say(ip:match("127.0.0.1"))
-ngx.say(ip:match("192.168.1.100"))
-ngx.say(ip:match("::1"))
+      ngx.say(ip:match("127.0.0.1"))
+      ngx.say(ip:match("192.168.1.100"))
+      ngx.say(ip:match("::1"))
+    }
+}
 ```
+
+[Back to TOC](#table-of-contents)
+
+# Methods
 
 ## ipmatcher.new
 
-`syntax: ok, err = ipmatcher.new(ips)`
+Creates a new hash table to store IP addresses.
 
-The `ips` is a array table, like `{ip1, ip2, ip3, ...}`,
-each element in the array is a string IP address.
+### Usage
+
+`ips` is a list of IPv4 or IPv6 IP addresses in a CIDR format (`{ip1, ip2, ip3, ...}`). 
 
 ```lua
-local ip, err = ipmatcher.new({"127.0.0.1", "192.168.0.0/16"})
+ok, err = ipmatcher.new(ips)
 ```
 
-Returns `nil` and error message if failed to create new `ipmatcher` instance.
+Returns `nil` and the error if it fails to create a new `ipmatcher` instance. 
 
-It supports any CIDR format for IPv4 and IPv6.
+### Example
 
 ```lua
 local ip, err = ipmatcher.new({
-        "127.0.0.1", "192.168.0.0/16",
-        "::1", "fe80::/16",
+        "127.0.0.1", "192.168.0.0/16", "::1", "fe80::/16",
     })
 ```
 
+[Back to TOC](#table-of-contents)
+
 ## ipmatcher.new_with_value
 
-`syntax: matcher, err = ipmatcher.new_with_value(ips)`
+Creates a new hash table to store IP addresses and corresponding values.
 
-The `ips` is a hash table, like `{[ip1] = val1, [ip2] = val2, ...}`,
-each key in the hash is a string IP address.
+### Usage
 
-When the `matcher` is created by `new_with_value`, calling `match` or `match_bin`
-on it will return the corresponding value of matched CIDR range instead of `true`.
+`ips` is a list of key-value pairs (`{[ip1] = val1, [ip2] = val2, ...}`), where each key is an IP address string (CIDR format for IPv4 and IPv6).
+
+```lua
+matcher, err = ipmatcher.new_with_value(ips)
+```
+
+Returns `nil` and the error if it fails to create a new `ipmatcher` instance. 
+
+### Example
 
 ```lua
 local ip, err = ipmatcher.new_with_value({
@@ -56,24 +96,10 @@ local ip, err = ipmatcher.new_with_value({
     ["192.168.0.0/16"] = {info = "b"},
 })
 local data, err = ip:match("192.168.0.1")
-print(data.info) -- the value is "b"
+print(data.info) -- "b"
 ```
 
-Returns `nil` and error message if failed to create new `ipmatcher` instance.
-
-It supports any CIDR format for IPv4 and IPv6.
-
-```lua
-local ip, err = ipmatcher.new_with_value({
-    ["127.0.0.1"] = {info = "a"},
-    ["192.168.0.0/16"] = {info = "b"},
-    ["::1"] = 1,
-    ["fe80::/32"] = "xx",
-})
-```
-
-If the ip address can be satified by multiple CIDR ranges, the returned value
-is undefined (depended on the internal implementation). For instance,
+If the IP address matches multiple values, the returned value can be either one of the values:
 
 ```lua
 local ip, err = ipmatcher.new_with_value({
@@ -81,48 +107,95 @@ local ip, err = ipmatcher.new_with_value({
     ["192.168.0.0/16"] = {info = "b"},
 })
 local data, err = ip:match("192.168.0.1")
-print(data.info) -- the value can be "a" or "b"
+print(data.info) -- "a" or "b"
 ```
 
-## ip.match
+[Back to TOC](#table-of-contents)
 
-`syntax: ok, err = ip:match(ip)`
+## ip:match
 
-Returns a `true` if the IP exists within any of the specified IP list.
-Returns a `false` if the IP doesn't exist within any of the specified IP list.
-Returns `false` and an error message with an invalid IP address.
+Checks if an IP address exists in the specified IP list.
+
+### Usage
+
+`ip` is an IP address string.
 
 ```lua
-local ok, err = ip:match("127.0.0.1")
+ok, err = ip:match(ip)
 ```
 
-## ip.match_bin
+Returns `true` or `value` if the specified `ip` exists in the list. Returns `false` if the `ip` does not exist in the list. And returns `false` and an error message if the IP address is invalid.
 
-`syntax: ok, err = ip:match_bin(bin_ip)`
+### Example
 
-Returns a `true` if the binary format IP exists within any of the specified IP list.
+```lua
+local ip, err = ipmatcher.new({
+        "127.0.0.1", "192.168.0.0/16", "::1", "fe80::/16",
+    })
 
-Returns `nil` and an error message with an invalid binary IP address.
+local ok, err = ip:match("127.0.0.1") -- true
+```
+
+[Back to TOC](#table-of-contents)
+
+## ip:match_bin
+
+Checks if an IP address in binary format exists in the specified IP list.
+
+### Usage
+
+`bin_ip` is an IP address in binary format.
+
+```lua
+ok, err = ip:match_bin(bin_ip)
+```
+
+Returns `true` if the specified `bin_ip` exists in the list. Returns `false` if it does not exist. Returns `nil` and an error message if `bin_ip` is invalid.
+
+### Example
 
 ```lua
 local ok, err = ip:match_bin(ngx.var.binary_remote_addr)
 ```
 
+[Back to TOC](#table-of-contents)
+
 ## ipmatcher.parse_ipv4
 
-`syntax: res = ipmatcher.parse_ipv4(ip)`
+Tries to parse an IPv4 address to a host byte order FFI `uint32_t` type integer.
 
-Tries to parse an IPv4 address to a host byte order FFI uint32_t type integer.
+```lua
+ipmatcher.parse_ipv4(ip)
+```
 
-Returns a `false` if the ip is not a valid IPv4 address.
+Returns `false` if the IP address is invalid.
 
+[Back to TOC](#table-of-contents)
 
 ## ipmatcher.parse_ipv6
 
-`syntax: res = ipmatcher.parse_ipv6(ip)`
+Tries to parse an IPv6 address to a table with four host byte order FF1 `uint32_t` type integer. The IP address can be wrapped in square brackets like `[::1]`.
 
-Tries to parse an IPv6 address to a table with four host byte order FFI uint32_t
-type integer.  The given IPv6 address can be wrapped by square brackets
-like `[::1]`.
+```lua
+ipmatcher.parse_ipv6(ip)
+```
 
 Returns a `false` if the ip is not a valid IPv6 address.
+
+[Back to TOC](#table-of-contents)
+
+# Installation
+
+## From LuaRocks
+
+```shell
+luarocks install lua-resty-ipmatcher
+```
+
+## From Source
+
+```shell
+make install
+```
+
+[Back to TOC](#table-of-contents)
